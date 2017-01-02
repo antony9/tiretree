@@ -1,6 +1,17 @@
 from trietree import Node
 
 
+def get_node_value(node):
+    if isinstance(node, Node):
+        if node.value == node.DUMMY_VALUE:
+            v = RedisNode.DUMMY_VALUE
+        else:
+            v = node.value
+    else:
+        v = RedisNode.DUMMY_VALUE
+    return v
+
+
 class RedisNodeChildrenDict(object):
     """
     define a dict-like object to operated on a certain redis
@@ -15,21 +26,18 @@ class RedisNodeChildrenDict(object):
         self._node = current_node
 
     def __contains__(self, child):
-        return self._node._rds_.exists("%s:%s" % (self._key, child))
+        return self._node._rds_.exists("%s:%s" % (self._node.get_rds_key(), child))
 
     def __setitem__(self, k, node):
         if isinstance(node, Node):
-            if node.value is node.DUMMY_VALUE:
-                v = RedisNode.DUMMY_VALUE
-            else:
-                v = node.value
-
-            self._node._rds_.set("%s:%s" % (self._key, k), v)
+            v = get_node_value(node)
+            self._node._rds_.set("%s:%s" % (self._node.get_rds_key(), k), v)
         else:
             raise RuntimeError()
 
     def __getitem__(self, k):
-        return RedisNode(self._node, k, set_value=False)
+        # Just return a node, don't care the value
+        return RedisNode(self._node, k, RedisNode.DUMMY_VALUE, set_value=False)
 
 
 class RedisNode(Node):
@@ -42,17 +50,18 @@ class RedisNode(Node):
         cls._prefix_ = prefix
 
     def __init__(self, parent, key, value, set_value=True):
-        if parent is None:
-            parent_prefix = self._prefix_
+        if parent is None and key is None:
+            self._rds_key = "%s" % self._prefix_
         else:
-            parent_prefix = parent.get_rds_key()
-        self._rds_key = "%s:%s" % (parent_prefix, key)
+            self._rds_key = "%s:%s" % (parent.get_rds_key(), key)
 
         if not set_value:
             return
 
         if value is None:
             value = self.DUMMY_VALUE
+        else:
+            value = get_node_value(value)
 
         # for value, set it
         self._rds_.set(self._rds_key, value)
@@ -62,11 +71,12 @@ class RedisNode(Node):
 
     @property
     def children(self):
-        return RedisNodeChildrenDict(self._rds_, self._rds_key)
+        return RedisNodeChildrenDict(self)
 
     @property
     def value(self):
-        return self._rds_.get(self._rds_key)
+        ret = self._rds_.get(self._rds_key)
+        return ret
 
     @value.setter
     def value(self, value):

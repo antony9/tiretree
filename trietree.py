@@ -35,7 +35,7 @@ class Trie(object):
 
     def __init__(self, root_data=None, mapping={}, key_split_callback=None, node_class=Node):
         self.key_split_callback = key_split_callback
-        self.node_class = Node
+        self.node_class = node_class
         self.root = self.node_class(None, None, root_data)
         if mapping:
             self.extend(mapping)
@@ -57,22 +57,22 @@ class Trie(object):
         key_split_result = self.__get_key_split(k)
         for c in key_split_result:
             if c not in n.children:
-                n.children[c] = self.node_class(n, c, Node.DUMMY_VALUE)
+                n.children[c] = self.node_class(n, c, self.node_class.DUMMY_VALUE)
             n = n.children[c]
         n.value = v
 
     def match(self, k):
-        ret = Node.DUMMY_VALUE
+        ret = self.node_class.DUMMY_VALUE
         n = self.root
         key_split_result = self.__get_key_split(k)
         for c in key_split_result:
             if c in n.children:
                 n = n.children[c]
-                if n.value is not Node.DUMMY_VALUE:
+                if n.value != self.node_class.DUMMY_VALUE:
                     ret = n.value
             else:
                 break
-        if ret is Node.DUMMY_VALUE:
+        if ret == self.node_class.DUMMY_VALUE:
             raise KeyError(k)
 
         return ret
