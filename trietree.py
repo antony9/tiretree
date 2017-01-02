@@ -1,20 +1,31 @@
 class Node(object):
-    no_value = object()
+    DUMMY_VALUE = object()
 
-    def _get_key(self, root):
-        k = []
-        n = self
-        while n is not root:
-            k.append(n.key)
-            n = n.parent
-        k.reverse()
-        return k
+#    def _get_key(self, root):
+#        k = []
+#        n = self
+#        while n is not root:
+#            k.append(n.key)
+#            n = n.parent
+#        k.reverse()
+#        return k
 
-    def __init__(self, parent, key, children, value):
-        self.parent = parent
-        self.key = key
-        self.children = children
-        self.value = value
+    def __init__(self, parent, key, value):
+        self._key = key
+        self._children = {}
+        self._value = value
+
+    @property
+    def children(self):
+        return self._children
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
 
 
 class Trie(object):
@@ -22,8 +33,10 @@ class Trie(object):
     Trie algorithm implemetation.
     """
 
-    def __init__(self, root_data=None, mapping={}):
-        self.root = Node(None, None, {}, root_data)
+    def __init__(self, root_data=None, mapping={}, key_split_callback=None, node_class=Node):
+        self.key_split_callback = key_split_callback
+        self.node_class = node_class
+        self.root = self.node_class(None, None, root_data)
         if mapping:
             self.extend(mapping)
 
@@ -31,23 +44,35 @@ class Trie(object):
         for (k, v) in mapping.items():
             self[k] = v
 
+    def __get_key_split(self, k):
+        key_split_result = []
+        if self.key_split_callback:
+            key_split_result = self.key_split_callback(k)
+        else:
+            key_split_result = list(str(k))
+        return key_split_result
+
     def __setitem__(self, k, v):
         n = self.root
-        for c in str(k):
-            n = n.children.setdefault(c, Node(n, c, {}, Node.no_value))
+        key_split_result = self.__get_key_split(k)
+        for c in key_split_result:
+            if c not in n.children:
+                n.children[c] = self.node_class(n, c, self.node_class.DUMMY_VALUE)
+            n = n.children[c]
         n.value = v
 
     def match(self, k):
-        ret = Node.no_value
+        ret = self.node_class.DUMMY_VALUE
         n = self.root
-        for c in str(k):
+        key_split_result = self.__get_key_split(k)
+        for c in key_split_result:
             if c in n.children:
                 n = n.children[c]
-                if n.value is not Node.no_value:
+                if n.value != self.node_class.DUMMY_VALUE:
                     ret = n.value
             else:
                 break
-        if ret is Node.no_value:
+        if ret == self.node_class.DUMMY_VALUE:
             raise KeyError(k)
 
         return ret
