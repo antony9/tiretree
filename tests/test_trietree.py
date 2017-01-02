@@ -36,6 +36,16 @@ class TestTireTree(unittest.TestCase):
         self.assertEqual(self.trie.match('135810001000'), '11')
         self.assertEqual(self.trie.match('135210001000'), '0.02')
 
+    def test_modify_tree(self):
+        self.trie['abc'] = '10'
+        self.trie['abcd'] = '11'
+        self.assertEqual(self.trie.match('abcdefghijk'), '11')
+        self.assertEqual(self.trie.match('abcefg'), '10')
+
+        self.trie['abc'] = '12'
+        self.assertEqual(self.trie.match('abcdefghijk'), '11')
+        self.assertEqual(self.trie.match('abcefg'), '12')
+
 
 class TestRedisTrieTree(TestTireTree):
     def setUp(self):
